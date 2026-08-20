@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.ProductMapper">
+    <select id="selectAll" resultType="org.example.ecms.entity.Product">
+        SELECT id, category_id, name, subtitle, main_image, detail_html, price, stock, sales,
+               status, is_new, is_hot, sort, created_at, updated_at
+        FROM product
+        ORDER BY sort DESC, id ASC
+    </select>
+</mapper>

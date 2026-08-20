@@ -1,0 +1,11 @@
+# 生产环境配置：所有敏感项必须通过环境变量注入，不带默认值
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+ecms:
+  jwt:
+    secret: ${JWT_SECRET}
+    expire-minutes: ${JWT_EXPIRE:120}

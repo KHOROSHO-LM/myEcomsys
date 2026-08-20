@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.DashboardMapper">
+    <select id="selectStats" resultType="org.example.ecms.entity.DashboardStats">
+        SELECT
+            (SELECT COUNT(*) FROM product) AS product_total,
+            (SELECT COUNT(*) FROM `order`) AS order_total,
+            (SELECT COUNT(*) FROM customer) AS customer_total,
+            (SELECT COUNT(*) FROM `order` WHERE status = 2) AS order_pending_ship,
+            (SELECT COUNT(*) FROM product WHERE status = 1) AS product_online,
+            (SELECT COUNT(*) FROM coupon WHERE status = 1) AS coupon_active,
+            (SELECT COUNT(*) FROM seckill WHERE status = 1) AS seckill_active,
+            (SELECT COUNT(*) FROM customer WHERE status = 0) AS customer_disabled
+    </select>
+
+    <select id="selectRecentOrders" resultType="org.example.ecms.entity.RecentOrderVO">
+        SELECT o.id, o.order_no, o.customer_id,
+               COALESCE(c.nickname, c.username) AS customer_name,
+               o.pay_amount, o.status, o.created_at
+        FROM `order` o
+        LEFT JOIN customer c ON o.customer_id = c.id
+        ORDER BY o.created_at DESC
+        LIMIT 5
+    </select>
+
+    <select id="selectCategorySales" resultType="org.example.ecms.entity.CategorySalesVO">
+        SELECT pc.id, pc.name, COALESCE(SUM(p.sales), 0) AS sales
+        FROM product_category pc
+        LEFT JOIN product p ON p.category_id = pc.id
+        GROUP BY pc.id, pc.name
+        ORDER BY sales DESC
+        LIMIT 10
+    </select>
+</mapper>

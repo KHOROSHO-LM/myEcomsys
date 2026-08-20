@@ -1,0 +1,458 @@
+-- ======================================================
+-- 电商管理系统数据库脚本
+-- 数据库名: shop_admin
+-- 字符集: utf8mb4
+-- 作者: AI 助手
+-- 日期: 2026-08-11
+-- ======================================================
+
+用户名：root
+端口号：3305
+密码：Lmi503606707
+
+-- 1. 创建数据库（如果不存在）
+CREATE DATABASE IF NOT EXISTS `shop_admin` 
+  CHARACTER SET utf8mb4 
+  COLLATE utf8mb4_unicode_ci;
+
+-- 切换到该数据库
+USE `shop_admin`;
+
+-- ======================================================
+-- 第一组：权限与用户表（5张表）
+-- ======================================================
+
+-- 1.1 管理员表
+DROP TABLE IF EXISTS `sys_user`;
+CREATE TABLE `sys_user` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `username` VARCHAR(50) NOT NULL COMMENT '登录账号',
+  `password` VARCHAR(255) NOT NULL COMMENT '加密密码（bcrypt）',
+  `nickname` VARCHAR(50) DEFAULT NULL COMMENT '昵称',
+  `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1启用，0禁用',
+  `last_login_time` DATETIME DEFAULT NULL COMMENT '最后登录时间',
+  `last_login_ip` VARCHAR(50) DEFAULT NULL COMMENT '最后登录IP',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员表';
+
+-- 1.2 角色表
+DROP TABLE IF EXISTS `sys_role`;
+CREATE TABLE `sys_role` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `role_name` VARCHAR(50) NOT NULL COMMENT '角色名称',
+  `role_code` VARCHAR(50) NOT NULL COMMENT '角色编码（如 ROLE_ADMIN）',
+  `description` VARCHAR(255) DEFAULT NULL COMMENT '描述',
+  `sort` INT DEFAULT 0 COMMENT '排序',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1启用，0禁用',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_role_code` (`role_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
+
+-- 1.3 菜单/权限表
+DROP TABLE IF EXISTS `sys_menu`;
+CREATE TABLE `sys_menu` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `parent_id` BIGINT DEFAULT 0 COMMENT '父菜单ID（0表示顶级）',
+  `menu_name` VARCHAR(50) NOT NULL COMMENT '菜单名称',
+  `path` VARCHAR(100) DEFAULT NULL COMMENT '路由路径',
+  `component` VARCHAR(100) DEFAULT NULL COMMENT '组件路径',
+  `icon` VARCHAR(50) DEFAULT NULL COMMENT '图标名称（Element Plus）',
+  `sort` INT DEFAULT 0 COMMENT '排序号',
+  `type` TINYINT NOT NULL COMMENT '类型：1目录，2菜单，3按钮',
+  `permission` VARCHAR(50) DEFAULT NULL COMMENT '权限标识（如 product:delete）',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1显示，0隐藏',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='菜单/权限表';
+
+-- 1.4 用户-角色关联表
+DROP TABLE IF EXISTS `sys_user_role`;
+CREATE TABLE `sys_user_role` (
+  `user_id` BIGINT NOT NULL COMMENT '用户ID',
+  `role_id` BIGINT NOT NULL COMMENT '角色ID',
+  PRIMARY KEY (`user_id`, `role_id`),
+  KEY `idx_role_id` (`role_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户-角色关联表';
+
+-- 1.5 角色-菜单关联表
+DROP TABLE IF EXISTS `sys_role_menu`;
+CREATE TABLE `sys_role_menu` (
+  `role_id` BIGINT NOT NULL COMMENT '角色ID',
+  `menu_id` BIGINT NOT NULL COMMENT '菜单ID',
+  PRIMARY KEY (`role_id`, `menu_id`),
+  KEY `idx_menu_id` (`menu_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色-菜单关联表';
+
+-- ======================================================
+-- 第二组：商品中心表（4张表）
+-- ======================================================
+
+-- 2.1 商品分类表
+DROP TABLE IF EXISTS `product_category`;
+CREATE TABLE `product_category` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `parent_id` BIGINT DEFAULT 0 COMMENT '父分类ID（0表示顶级）',
+  `name` VARCHAR(50) NOT NULL COMMENT '分类名称',
+  `level` TINYINT DEFAULT 1 COMMENT '层级：1,2,3',
+  `icon` VARCHAR(255) DEFAULT NULL COMMENT '分类图标',
+  `sort` INT DEFAULT 0 COMMENT '排序',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1启用，0禁用',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_parent_id` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品分类表';
+
+-- 2.2 商品主表
+DROP TABLE IF EXISTS `product`;
+CREATE TABLE `product` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `category_id` BIGINT NOT NULL COMMENT '分类ID',
+  `name` VARCHAR(200) NOT NULL COMMENT '商品名称',
+  `subtitle` VARCHAR(200) DEFAULT NULL COMMENT '副标题/卖点',
+  `main_image` VARCHAR(255) DEFAULT NULL COMMENT '主图URL',
+  `detail_html` LONGTEXT DEFAULT NULL COMMENT '详情描述（富文本HTML）',
+  `price` DECIMAL(10,2) DEFAULT 0.00 COMMENT '售价（最低SKU价格）',
+  `stock` INT DEFAULT 0 COMMENT '总库存（冗余字段）',
+  `sales` INT DEFAULT 0 COMMENT '销量（冗余字段）',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1上架，0下架',
+  `is_new` TINYINT DEFAULT 0 COMMENT '是否新品：1是，0否',
+  `is_hot` TINYINT DEFAULT 0 COMMENT '是否热卖：1是，0否',
+  `sort` INT DEFAULT 0 COMMENT '排序（数值越大越靠前）',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_category_id` (`category_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品主表';
+
+-- 2.3 SKU规格表
+DROP TABLE IF EXISTS `product_sku`;
+CREATE TABLE `product_sku` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `product_id` BIGINT NOT NULL COMMENT '商品ID',
+  `specs` VARCHAR(200) NOT NULL COMMENT '规格描述（如"红色;M码"）',
+  `price` DECIMAL(10,2) NOT NULL COMMENT '该SKU的价格',
+  `stock` INT NOT NULL DEFAULT 0 COMMENT '该SKU的库存',
+  `image` VARCHAR(255) DEFAULT NULL COMMENT '该SKU对应的图片',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_product_id` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='SKU规格表';
+
+-- 2.4 商品附图
+DROP TABLE IF EXISTS `product_image`;
+CREATE TABLE `product_image` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `product_id` BIGINT NOT NULL COMMENT '商品ID',
+  `image_url` VARCHAR(255) NOT NULL COMMENT '图片URL',
+  `sort` INT DEFAULT 0 COMMENT '排序',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_product_id` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品附图';
+
+-- ======================================================
+-- 第三组：订单中心表（3张表）
+-- ======================================================
+
+-- 3.1 订单主表
+DROP TABLE IF EXISTS `order`;
+CREATE TABLE `order` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `order_no` VARCHAR(32) NOT NULL COMMENT '订单号（唯一）',
+  `customer_id` BIGINT NOT NULL COMMENT '买家ID',
+  `total_amount` DECIMAL(10,2) NOT NULL COMMENT '订单总金额',
+  `pay_amount` DECIMAL(10,2) NOT NULL COMMENT '实付金额（优惠后）',
+  `pay_method` TINYINT DEFAULT NULL COMMENT '支付方式：1微信，2支付宝',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1待付款，2待发货，3待收货，4已完成，5已取消，6售后中',
+  `receiver_name` VARCHAR(50) NOT NULL COMMENT '收货人姓名',
+  `receiver_phone` VARCHAR(20) NOT NULL COMMENT '收货人电话',
+  `receiver_address` VARCHAR(255) NOT NULL COMMENT '详细地址',
+  `logistics_company` VARCHAR(50) DEFAULT NULL COMMENT '快递公司',
+  `logistics_no` VARCHAR(50) DEFAULT NULL COMMENT '运单号',
+  `pay_time` DATETIME DEFAULT NULL COMMENT '支付时间',
+  `delivery_time` DATETIME DEFAULT NULL COMMENT '发货时间',
+  `finish_time` DATETIME DEFAULT NULL COMMENT '完成时间',
+  `cancel_time` DATETIME DEFAULT NULL COMMENT '取消时间',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_no` (`order_no`),
+  KEY `idx_customer_id` (`customer_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单主表';
+
+-- 3.2 订单明细表
+DROP TABLE IF EXISTS `order_item`;
+CREATE TABLE `order_item` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `order_id` BIGINT NOT NULL COMMENT '订单ID',
+  `product_id` BIGINT NOT NULL COMMENT '商品ID',
+  `product_name` VARCHAR(200) NOT NULL COMMENT '商品名称（快照）',
+  `sku_specs` VARCHAR(200) DEFAULT NULL COMMENT 'SKU规格（快照）',
+  `price` DECIMAL(10,2) NOT NULL COMMENT '单价（快照）',
+  `quantity` INT NOT NULL COMMENT '数量',
+  `total_price` DECIMAL(10,2) NOT NULL COMMENT '小计',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_product_id` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单明细表';
+
+-- 3.3 订单操作日志
+DROP TABLE IF EXISTS `order_log`;
+CREATE TABLE `order_log` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `order_id` BIGINT NOT NULL COMMENT '订单ID',
+  `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人',
+  `action` VARCHAR(50) NOT NULL COMMENT '操作类型（如"发货"、"改价"）',
+  `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_order_id` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单操作日志';
+
+-- ======================================================
+-- 第四组：客户中心表（2张表）
+-- ======================================================
+
+-- 4.1 买家表
+DROP TABLE IF EXISTS `customer`;
+CREATE TABLE `customer` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `username` VARCHAR(50) NOT NULL COMMENT '用户名（唯一）',
+  `phone` VARCHAR(20) NOT NULL COMMENT '手机号（唯一）',
+  `email` VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
+  `password` VARCHAR(255) DEFAULT NULL COMMENT '加密密码（若支持账号密码登录）',
+  `nickname` VARCHAR(50) DEFAULT NULL COMMENT '昵称',
+  `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像',
+  `level_id` BIGINT DEFAULT NULL COMMENT '会员等级ID',
+  `points` INT DEFAULT 0 COMMENT '积分',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1正常，0禁用',
+  `register_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+  `last_login_time` DATETIME DEFAULT NULL COMMENT '最后登录时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_username` (`username`),
+  UNIQUE KEY `uk_phone` (`phone`),
+  KEY `idx_level_id` (`level_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='买家表';
+
+-- 4.2 收货地址表
+DROP TABLE IF EXISTS `customer_address`;
+CREATE TABLE `customer_address` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `customer_id` BIGINT NOT NULL COMMENT '买家ID',
+  `receiver_name` VARCHAR(50) NOT NULL COMMENT '收货人',
+  `receiver_phone` VARCHAR(20) NOT NULL COMMENT '电话',
+  `province` VARCHAR(50) NOT NULL COMMENT '省',
+  `city` VARCHAR(50) NOT NULL COMMENT '市',
+  `district` VARCHAR(50) DEFAULT NULL COMMENT '区',
+  `detail` VARCHAR(255) NOT NULL COMMENT '详细地址',
+  `is_default` TINYINT DEFAULT 0 COMMENT '是否默认地址：1是，0否',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_customer_id` (`customer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='收货地址表';
+
+-- 4.3 会员等级表
+DROP TABLE IF EXISTS `customer_level`;
+CREATE TABLE `customer_level` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `level_name` VARCHAR(50) NOT NULL COMMENT '等级名称（如"黄金会员"）',
+  `level_code` VARCHAR(20) NOT NULL COMMENT '等级编码（如 GOLD）',
+  `min_points` INT DEFAULT 0 COMMENT '所需最低积分',
+  `discount_rate` DECIMAL(3,2) DEFAULT 1.00 COMMENT '折扣率（如0.95表示95折）',
+  `benefits` VARCHAR(255) DEFAULT NULL COMMENT '权益描述',
+  `sort` INT DEFAULT 0 COMMENT '排序',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1启用，0禁用',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_level_code` (`level_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员等级表';
+
+-- ======================================================
+-- 第五组：营销中心表（2张表）
+-- ======================================================
+
+-- 5.1 优惠券表
+DROP TABLE IF EXISTS `coupon`;
+CREATE TABLE `coupon` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `name` VARCHAR(100) NOT NULL COMMENT '优惠券名称',
+  `type` TINYINT NOT NULL COMMENT '类型：1满减，2折扣',
+  `threshold` DECIMAL(10,2) DEFAULT 0.00 COMMENT '使用门槛（满多少元）',
+  `discount_value` DECIMAL(10,2) NOT NULL COMMENT '优惠值（满减免多少，或折扣率如8.5）',
+  `stock` INT NOT NULL COMMENT '发行总量',
+  `used_count` INT DEFAULT 0 COMMENT '已领取数量',
+  `per_user_limit` INT DEFAULT 1 COMMENT '每人限领数量',
+  `expire_start` DATETIME NOT NULL COMMENT '有效期开始',
+  `expire_end` DATETIME NOT NULL COMMENT '有效期结束',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1启用，0停用',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='优惠券表';
+
+-- 5.2 优惠券领取记录
+DROP TABLE IF EXISTS `coupon_issue`;
+CREATE TABLE `coupon_issue` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `coupon_id` BIGINT NOT NULL COMMENT '优惠券ID',
+  `customer_id` BIGINT NOT NULL COMMENT '买家ID',
+  `status` TINYINT DEFAULT 0 COMMENT '状态：0未使用，1已使用，2已过期',
+  `used_time` DATETIME DEFAULT NULL COMMENT '使用时间',
+  `order_id` BIGINT DEFAULT NULL COMMENT '关联订单ID',
+  `expire_time` DATETIME NOT NULL COMMENT '过期时间',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_coupon_id` (`coupon_id`),
+  KEY `idx_customer_id` (`customer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='优惠券领取记录';
+
+-- 5.3 秒杀活动表
+DROP TABLE IF EXISTS `seckill`;
+CREATE TABLE `seckill` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `product_id` BIGINT NOT NULL COMMENT '商品ID',
+  `seckill_price` DECIMAL(10,2) NOT NULL COMMENT '秒杀价',
+  `seckill_stock` INT NOT NULL COMMENT '秒杀库存',
+  `seckill_limit` INT DEFAULT 1 COMMENT '每人限购数量',
+  `start_time` DATETIME NOT NULL COMMENT '秒杀开始时间',
+  `end_time` DATETIME NOT NULL COMMENT '秒杀结束时间',
+  `status` TINYINT DEFAULT 0 COMMENT '状态：0未开始，1进行中，2已结束',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_product_id` (`product_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='秒杀活动表';
+
+-- ======================================================
+-- 第六组：内容管理表（1张表）
+-- ======================================================
+
+-- 6.1 轮播图表
+DROP TABLE IF EXISTS `banner`;
+CREATE TABLE `banner` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `title` VARCHAR(100) DEFAULT NULL COMMENT '标题',
+  `image_url` VARCHAR(255) NOT NULL COMMENT '图片URL',
+  `link_url` VARCHAR(255) DEFAULT NULL COMMENT '跳转链接',
+  `sort` INT DEFAULT 0 COMMENT '排序',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1显示，0隐藏',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='轮播图表';
+
+-- 6.2 公告表
+DROP TABLE IF EXISTS `notice`;
+CREATE TABLE `notice` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `title` VARCHAR(200) NOT NULL COMMENT '公告标题',
+  `content` TEXT NOT NULL COMMENT '公告内容',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1显示，0隐藏',
+  `sort` INT DEFAULT 0 COMMENT '排序',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='公告表';
+
+-- ======================================================
+-- 第七组：系统日志表（2张表）
+-- ======================================================
+
+-- 7.1 操作日志
+DROP TABLE IF EXISTS `operation_log`;
+CREATE TABLE `operation_log` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` BIGINT DEFAULT NULL COMMENT '操作人ID',
+  `username` VARCHAR(50) DEFAULT NULL COMMENT '操作人账号',
+  `module` VARCHAR(50) DEFAULT NULL COMMENT '操作模块（如"商品管理"）',
+  `action` VARCHAR(50) DEFAULT NULL COMMENT '操作类型（如"删除"）',
+  `request_url` VARCHAR(255) DEFAULT NULL COMMENT '请求URL',
+  `request_method` VARCHAR(10) DEFAULT NULL COMMENT '请求方法',
+  `ip` VARCHAR(50) DEFAULT NULL COMMENT 'IP地址',
+  `cost_time` INT DEFAULT NULL COMMENT '耗时（毫秒）',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志';
+
+-- 7.2 登录日志
+DROP TABLE IF EXISTS `login_log`;
+CREATE TABLE `login_log` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` BIGINT DEFAULT NULL COMMENT '用户ID',
+  `username` VARCHAR(50) DEFAULT NULL COMMENT '登录账号',
+  `login_type` TINYINT DEFAULT 1 COMMENT '登录类型：1后台管理员，2买家',
+  `ip` VARCHAR(50) DEFAULT NULL COMMENT '登录IP',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1成功，0失败',
+  `message` VARCHAR(255) DEFAULT NULL COMMENT '提示信息',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_username` (`username`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='登录日志';
+
+-- ======================================================
+-- 初始化数据（测试用）
+-- ======================================================
+
+-- 插入超级管理员（密码：admin123，bcrypt加密）
+-- 原密码 admin123 的 bcrypt 密文（强度10）
+INSERT INTO `sys_user` (`username`, `password`, `nickname`, `status`, `created_at`) VALUES
+('admin', '$2a$10$GqIOH7HdfNg6QyDNOdDtCuZKs3h.zy3nqz6NpRodGw.JSAp9YiPKi', '超级管理员', 1, NOW());
+
+-- 插入角色
+INSERT INTO `sys_role` (`role_name`, `role_code`, `description`, `sort`, `status`) VALUES
+('超级管理员', 'ROLE_ADMIN', '拥有所有权限', 1, 1),
+('运营管理员', 'ROLE_OPERATOR', '管理商品和订单', 2, 1),
+('客服专员', 'ROLE_CUSTOMER_SERVICE', '处理订单和售后', 3, 1);
+
+-- 用户-角色关联（admin 绑定超级管理员角色）
+INSERT INTO `sys_user_role` (`user_id`, `role_id`) VALUES (1, 1);
+
+-- 插入商品分类（示例）
+INSERT INTO `product_category` (`parent_id`, `name`, `level`, `sort`, `status`) VALUES
+(0, '服装服饰', 1, 1, 1),
+(0, '数码家电', 1, 2, 1),
+(1, '男装', 2, 1, 1),
+(1, '女装', 2, 2, 1),
+(2, '手机', 2, 1, 1),
+(2, '电脑', 2, 2, 1);
+
+-- 插入会员等级
+INSERT INTO `customer_level` (`level_name`, `level_code`, `min_points`, `discount_rate`, `sort`, `status`) VALUES
+('普通会员', 'NORMAL', 0, 1.00, 1, 1),
+('银牌会员', 'SILVER', 1000, 0.95, 2, 1),
+('金牌会员', 'GOLD', 3000, 0.90, 3, 1),
+('钻石会员', 'DIAMOND', 5000, 0.85, 4, 1);
+
+-- 插入示例轮播图
+INSERT INTO `banner` (`title`, `image_url`, `link_url`, `sort`, `status`) VALUES
+('春季大促', '/banners/spring-sale.jpg', '/promotion/spring', 1, 1),
+('新品上市', '/banners/new-arrival.jpg', '/product/new', 2, 1);
+
+-- 插入示例公告
+INSERT INTO `notice` (`title`, `content`, `status`, `sort`) VALUES
+('系统升级维护通知', '本系统将于2026年8月15日凌晨2:00-4:00进行升级维护，届时将暂停服务，给您带来不便敬请谅解。', 1, 1),
+('春节发货安排', '春节期间（2月10日-2月17日）订单将统一延迟至2月18日发货，请悉知。', 1, 2);
+
+-- ======================================================
+-- 查看所有表
+-- ======================================================
+SHOW TABLES;
+
+-- 查看表结构（以 sys_user 为例）
+-- DESC sys_user;

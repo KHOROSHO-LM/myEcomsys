@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.CustomerLevelMapper">
+    <select id="selectAll" resultType="org.example.ecms.entity.CustomerLevel">
+        SELECT id, level_name, level_code, min_points, discount_rate, benefits, sort, status, created_at
+        FROM customer_level
+        ORDER BY sort ASC
+    </select>
+</mapper>

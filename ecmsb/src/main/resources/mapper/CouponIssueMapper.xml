@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.CouponIssueMapper">
+    <select id="selectByCouponId" resultType="org.example.ecms.entity.CouponIssue">
+        SELECT id, coupon_id, customer_id, status, used_time, order_id, expire_time, created_at
+        FROM coupon_issue
+        WHERE coupon_id = #{couponId}
+        ORDER BY created_at DESC
+    </select>
+</mapper>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.OrderItemMapper">
+    <select id="selectByOrderId" resultType="org.example.ecms.entity.OrderItem">
+        SELECT id, order_id, product_id, product_name, sku_specs, price, quantity, total_price, created_at
+        FROM order_item
+        WHERE order_id = #{orderId}
+        ORDER BY id ASC
+    </select>
+</mapper>

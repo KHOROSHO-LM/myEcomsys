@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.SeckillMapper">
+    <select id="selectAll" resultType="org.example.ecms.entity.Seckill">
+        SELECT id, product_id, seckill_price, seckill_stock, seckill_limit,
+               start_time, end_time, status, created_at, updated_at
+        FROM seckill
+        ORDER BY start_time DESC
+    </select>
+</mapper>

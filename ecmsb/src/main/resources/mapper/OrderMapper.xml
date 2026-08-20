@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.OrderMapper">
+    <select id="selectAll" resultType="org.example.ecms.entity.Order">
+        SELECT id, order_no, customer_id, total_amount, pay_amount, pay_method, status,
+               receiver_name, receiver_phone, receiver_address, logistics_company, logistics_no,
+               pay_time, delivery_time, finish_time, cancel_time, created_at, updated_at
+        FROM `order`
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByStatus" resultType="org.example.ecms.entity.Order">
+        SELECT id, order_no, customer_id, total_amount, pay_amount, pay_method, status,
+               receiver_name, receiver_phone, receiver_address, logistics_company, logistics_no,
+               pay_time, delivery_time, finish_time, cancel_time, created_at, updated_at
+        FROM `order`
+        WHERE status = #{status}
+        ORDER BY created_at DESC
+    </select>
+</mapper>

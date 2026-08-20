@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ecms.mapper.NoticeMapper">
+    <select id="selectAll" resultType="org.example.ecms.entity.Notice">
+        SELECT id, title, content, status, sort, created_at, updated_at
+        FROM notice
+        ORDER BY sort ASC, id ASC
+    </select>
+</mapper>
